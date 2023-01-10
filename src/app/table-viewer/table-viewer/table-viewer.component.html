@@ -1,36 +1,11 @@
 
-<div class="box info">
+<div class="box">
 
-  <h2>SPARQL query</h2>
-<!--
-  <div>
-
-    <form [formGroup]="queryForm" (ngSubmit)="submit()">
-      
-      <span class="p-float-label">
-	<textarea id="query" rows="12" cols="60" pInputTextarea
-		  formControlName="query">
-	</textarea>
-	<label for="query">Enter SPARQL query</label>
-      </span>
-
-      <button type="submit"
-	      pButton pRipple class="p-button-raised p-button-text">
-	Search
-      </button>
-      
-    </form>
-
-    <div class="info">
-      {{info1}}
-      <br>
-      {{info2}}
-    </div>
-
+  <div class="heading">
+    <h2>Object viewer</h2>
   </div>
--->
 
-  <div *ngIf="detail.length > 0">
+  <div class="main" *ngIf="detail.length > 0">
     <h2>Properties</h2>
     <p-table [value]="detail" styleClass="p-datatable-striped"
 	     [tableStyle]="{'min-width': '20rem'}" >
@@ -51,5 +26,4 @@
   </div>
 
 </div>
-
 

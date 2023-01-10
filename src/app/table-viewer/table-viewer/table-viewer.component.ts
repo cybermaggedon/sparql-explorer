@@ -1,20 +1,15 @@
 
-
-// localhost:8080/table?node=http:%2F%2Fpivotlabs.vc%2Finnov%2Fperson%2Fukri%2F047554e453b2e786
-
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-
-import { FormBuilder } from '@angular/forms';
-
-//import { TripleQuery } from '../../query/triple-query';
-//import { QueryService } from '../../query/query.service';
-import { PropertiesService } from '../../graph/properties.service';
-import { ProgressService, ProgressEvent } from '../../progress.service';
-import { Node } from '../../graph/graph';
-
-import { Observable, forkJoin, mergeMap, mergeAll, concatMap } from 'rxjs';
+import { timer, forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
+
+import { PropertiesService } from '../../graph/properties.service';
+import { Node } from '../../graph/graph';
+import { Uri, Literal } from '../../rdf/triple';
+import { RelationshipService } from '../../graph/relationship.service';
+import { DefinitionsService } from '../../query/definitions.service';
+import { TransformService } from '../../transform/transform.service';
 
 @Component({
     selector: 'table-viewer',
@@ -25,43 +20,22 @@ export class TableViewerComponent implements OnInit {
 
     node : string = "";
 
-    detail : {
-	key : string,
-	value : string
-    }[] = [];
+    detail : { key: string, value: string }[] = [];
 
     constructor(
-	private formBuilder: FormBuilder,
 	private route : ActivatedRoute,
-	//	private queryService : QueryService,
 	private properties : PropertiesService,
-	private progress : ProgressService,
+	private relationship : RelationshipService,
+	private definitions : DefinitionsService,
+	private transform : TransformService,
     ) {
-
-	this.progress.progressEvents().subscribe(
-
-	    (res : ProgressEvent) => {
-
-		let a = Array.from(res.progress.values());
-
-		if (a.length > 0)
-		    this.info1 = a[0] + " ...";
-		else
-		    this.info1 = "";
-
-		if (a.length > 1)
-		    this.info2 = a[1] + " ...";
-		else
-		    this.info2 = "";
-
-	    }
-
-	);
 
 	this.route.queryParams.subscribe(
 	    params => {
 		if (params["node"]) {
-		    this.query(params["node"]);
+		    timer(1).subscribe(
+			() => this.query(params["node"])
+		    );
 		}
 	    }
 	);
@@ -71,13 +45,6 @@ export class TableViewerComponent implements OnInit {
     rows : any[] = [];
     vars : string[] = [];
 
-    info1 = "";
-    info2 = "";
-
-    queryForm = this.formBuilder.group({
-	query: "SELECT ?s ?p ?o\nWHERE {\n  ?s ?p ?o .\n}\nLIMIT 10\n",
-    });
-
     ngOnInit(): void {
     }
 
@@ -85,16 +52,58 @@ export class TableViewerComponent implements OnInit {
 
 	let n = new Node();
 	n.id = id;
-	
-	this.properties.getProps(n).subscribe(
+/*
+	this.properties.getProperties(n).subscribe(
 	    props => {
-		this.detail = props;
+		this.detail = props.properties.map(
+		    prop => {
+			return {
+			    key: prop.key,
+			    value: prop.value.value(),
+			}
+		    }
+		);
+		console.log(this.detail);
+	    }
+	);
+*/
+	/*
+	this.relationship.getRelationships(new Uri(id)).subscribe(
+	    (res : any) => {
+		console.log(res)
+	    }
+	    );
+	*/
+
+	forkJoin(
+	    {
+		i: this.definitions.relationshipKindsIn(new Uri(id)).pipe(
+		    this.transform.addConstantColumn(
+			"dir", new Literal("in")
+		    ),
+		),
+		o: this.definitions.relationshipKindsOut(new Uri(id)).pipe(
+		    this.transform.addConstantColumn(
+			"dir", new Literal("out")
+		    ),
+		),
+	    }
+	).pipe(
+	    map(
+		res => {
+		    return {
+			vars: res.i.vars,
+			data: res.i.data.concat(res.o.data),
+		    };
+		}
+	    ),
+	    this.definitions.joinLabel("pred", "name"),
+	).subscribe(
+	    (res : any) => {
+		console.log(res);
 	    }
 	);
 
-    }
-
-    submit() {
     }
 
 }

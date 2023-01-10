@@ -1,6 +1,6 @@
 
 import { Injectable } from '@angular/core';
-import { Observable, forkJoin, of, mergeMap } from 'rxjs';
+import { Observable, forkJoin, of, mergeMap, catchError } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 import { Value, Uri, Literal } from '../rdf/triple';
@@ -61,20 +61,21 @@ export class RelationshipService {
 	    ),
 	    mergeMap(
 		res => {
-		    return forkJoin(
-			res.map(
-			    rel => this.definitions.labelQuery(
-				rel["pred"]
-			    ).pipe(
-				map(
-				    lbl => {
-					rel["name"] = new Literal(lbl);
-					return rel;
-				    }
+		    let ops = res.map(
+			    rel => {
+			    	return this.definitions.labelQuery(
+				    rel["pred"]
+				).pipe(
+				    map(
+					lbl => {
+					    rel["name"] = new Literal(lbl);
+					    return rel;
+					}
+				    )
 				)
-			    )
-			)
-		    )
+			    }
+		    );
+		    return forkJoin(ops);
 		}
 	    ),
 	    map(rels => rels.map(
@@ -86,6 +87,54 @@ export class RelationshipService {
 		    return rel;
 		}
 	    )),
+	)
+
+    }
+
+    getR(id : Uri){
+        return forkJoin({
+		in: this.definitions.relationshipKindsIn(id).pipe(
+		    this.transform.addConstantColumn(
+			"dir", new Literal("in")
+		    ),
+		),
+	        out: this.definitions.relationshipKindsOut(id).pipe(
+		    this.transform.addConstantColumn(
+			"dir", new Literal("out")
+		    ),
+		)
+	}).pipe(
+	    map(rels => {
+		return rels.in.data.concat(rels.out.data)
+	    }),
+	    map(
+		rels => rels.filter(
+		    rel => !this.ignoreRelationship(rel["pred"])
+		)
+	    ),
+	    mergeMap(
+		res => {
+
+		    let ops : any[] = [];
+
+		    for (let row of res) {
+
+			let op = this.definitions.labelQuery(
+			    row["pred"]
+			).pipe(
+			    map(
+				lbl => {
+				    row["name"] = new Literal(lbl);
+				    return row;
+				}
+			    )
+			);
+			ops.push(op);
+		    }
+
+		    return forkJoin(ops);
+		}
+	    ),
 	)
 
     }
