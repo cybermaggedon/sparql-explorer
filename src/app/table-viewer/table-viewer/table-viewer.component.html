@@ -22,8 +22,55 @@
 	</tr>
       </ng-template>
     </p-table>
+  </div>
+
+  <div class="main">
+    <h2>Relationships</h2>
+
+    <div *ngFor="let rel of relationships | keyvalue">
+
+      <h3>{{rel.key}}</h3>
+
+      <div>Inward: {{rel.value["inward"]}}</div>
+
+      <p-table [value]="rel.value['targets']" styleClass="p-datatable-striped"
+	       [tableStyle]="{'min-width': '20rem'}" >
+	<ng-template pTemplate="header">
+	  <tr>
+	    <th>id</th>
+	    <th>value</th>
+	  </tr>
+	</ng-template>
+	<ng-template pTemplate="body" let-row>
+	  <tr>
+            <td>{{row.id.value()}}</td>
+            <td>{{row.label.value()}}</td>
+	  </tr>
+	</ng-template>
+      </p-table>
+
+    </div>
 
   </div>
+
+  <!--
+    <p-table [value]="detail" styleClass="p-datatable-striped"
+	     [tableStyle]="{'min-width': '20rem'}" >
+      <ng-template pTemplate="header">
+	<tr>
+	  <th>property</th>
+	  <th>value</th>
+	</tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-row>
+	<tr>
+          <td>{{row.key}}</td>
+          <td>{{row.value}}</td>
+	</tr>
+      </ng-template>
+    </p-table>
+</div>
+-->
 
 </div>
 

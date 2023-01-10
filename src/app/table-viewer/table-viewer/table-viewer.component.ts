@@ -22,6 +22,8 @@ export class TableViewerComponent implements OnInit {
 
     detail : { key: string, value: string }[] = [];
 
+    relationships : { [key : string] : any } = {};
+
     constructor(
 	private route : ActivatedRoute,
 	private properties : PropertiesService,
@@ -31,9 +33,6 @@ export class TableViewerComponent implements OnInit {
     ) {
 
     }
-
-    rows : any[] = [];
-    vars : string[] = [];
 
     ngOnInit(): void {
 
@@ -82,12 +81,36 @@ export class TableViewerComponent implements OnInit {
 	    ),
 	    mergeMap(
 		rels => {
-		    return of(rels);
+		    let obs : any = {};
+		    for (let rel of rels) {
+			let pred = rel["pred"];
+			let ob = this.definitions.relationshipsOutwards(
+			    new Uri(id), pred
+			).pipe(
+			    this.definitions.joinLabel("o", "olabel"),
+			    map(res => {
+				return {
+				    inward: rel["dir"].value() == "in",
+				    targets: res.data.map(
+					row => {
+					    return {
+						id: row["o"],
+						label: row["olabel"],
+					    };
+					}
+				    ),
+				};
+			    })
+			);
+			obs[pred.value()] = ob;
+		    }
+		    return forkJoin(obs);
 		}
 	    ),
 	).subscribe(
 	    (res : any) => {
-		console.log(res)
+		console.log(res);
+		this.relationships = res;
 	    }
 	);
 
