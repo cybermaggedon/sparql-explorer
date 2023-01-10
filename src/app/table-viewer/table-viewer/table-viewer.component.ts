@@ -1,8 +1,8 @@
 
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { timer, forkJoin } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { timer, forkJoin, of } from 'rxjs';
+import { map, mergeMap } from 'rxjs/operators';
 
 import { PropertiesService } from '../../graph/properties.service';
 import { Node } from '../../graph/graph';
@@ -30,10 +30,17 @@ export class TableViewerComponent implements OnInit {
 	private transform : TransformService,
     ) {
 
+    }
+
+    rows : any[] = [];
+    vars : string[] = [];
+
+    ngOnInit(): void {
+
 	this.route.queryParams.subscribe(
 	    params => {
 		if (params["node"]) {
-		    timer(1).subscribe(
+		    timer(1000).subscribe(
 			() => this.query(params["node"])
 		    );
 		}
@@ -42,17 +49,11 @@ export class TableViewerComponent implements OnInit {
 
     }
 
-    rows : any[] = [];
-    vars : string[] = [];
-
-    ngOnInit(): void {
-    }
-
     query(id : string) {
 
 	let n = new Node();
 	n.id = id;
-/*
+
 	this.properties.getProperties(n).subscribe(
 	    props => {
 		this.detail = props.properties.map(
@@ -63,44 +64,30 @@ export class TableViewerComponent implements OnInit {
 			}
 		    }
 		);
-		console.log(this.detail);
 	    }
 	);
-*/
-	/*
-	this.relationship.getRelationships(new Uri(id)).subscribe(
-	    (res : any) => {
-		console.log(res)
-	    }
-	    );
-	*/
 
-	forkJoin(
-	    {
-		i: this.definitions.relationshipKindsIn(new Uri(id)).pipe(
-		    this.transform.addConstantColumn(
-			"dir", new Literal("in")
-		    ),
-		),
-		o: this.definitions.relationshipKindsOut(new Uri(id)).pipe(
-		    this.transform.addConstantColumn(
-			"dir", new Literal("out")
-		    ),
-		),
-	    }
-	).pipe(
+	forkJoin({
+	    i: this.definitions.relationshipKindsIn(new Uri(id)).pipe(
+		this.transform.addConstantColumn("dir", new Literal("in"))
+	    ),
+	    o: this.definitions.relationshipKindsOut(new Uri(id)).pipe(
+		this.transform.addConstantColumn("dir", new Literal("out"))
+	    )		
+	}).pipe(
 	    map(
-		res => {
-		    return {
-			vars: res.i.vars,
-			data: res.i.data.concat(res.o.data),
-		    };
+		rels => {
+		    return rels.i.data.concat(rels.o.data);
 		}
 	    ),
-	    this.definitions.joinLabel("pred", "name"),
+	    mergeMap(
+		rels => {
+		    return of(rels);
+		}
+	    ),
 	).subscribe(
 	    (res : any) => {
-		console.log(res);
+		console.log(res)
 	    }
 	);
 
